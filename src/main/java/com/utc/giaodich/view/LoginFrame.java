@@ -10,12 +10,13 @@ public class LoginFrame extends JFrame {
     private JTextField txtUsername;
     private JPasswordField txtPassword;
     private JButton btnLogin;
+    private JButton btnGoToRegister;
 
     public LoginFrame() {
         setTitle("Sàn Đồ Cũ Sinh Viên UTC - Đăng nhập");
         setSize(400, 250);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setLocationRelativeTo(null); // Cho cửa sổ ra giữa màn hình
+        setLocationRelativeTo(null);
         setLayout(new GridLayout(3, 1, 10, 10));
 
         // 1. Tiêu đề
@@ -36,32 +37,42 @@ public class LoginFrame extends JFrame {
         add(pnlInput);
 
         // 3. Nút bấm
-        JPanel pnlButton = new JPanel();
-        btnLogin = new JButton("Đăng nhập vào hệ thống");
+        JPanel pnlButton = new JPanel(new FlowLayout());
+        btnLogin = new JButton("Đăng nhập");
+        btnGoToRegister = new JButton("Tạo tài khoản");
+
         pnlButton.add(btnLogin);
+        pnlButton.add(btnGoToRegister);
         add(pnlButton);
 
-        // --- XỬ LÝ SỰ KIỆN PHÂN VAI ---
+        // --- XỬ LÝ SỰ KIỆN ---
+
+        // Nút chuyển sang Đăng ký
+        btnGoToRegister.addActionListener(e -> {
+            this.dispose();
+            new RegisterFrame().setVisible(true);
+        });
+
+        // Nút Đăng nhập
         btnLogin.addActionListener(e -> {
             String user = txtUsername.getText();
             String pass = new String(txtPassword.getPassword());
 
             UserDAO userDAO = new UserDAO();
-            User loggedInUser = userDAO.login(user, pass); // Gọi hàm ở Bước 1
+            User loggedInUser = userDAO.login(user, pass);
 
             if (loggedInUser != null) {
                 // Đăng nhập thành công -> Đóng cửa sổ Login
                 this.dispose();
 
-                // KIỂM TRA ROLE ĐỂ MỞ ĐÚNG GIAO DIỆN
+                // FIX LỖI Ở ĐÂY: Phân luồng chính xác
                 if ("SELLER".equals(loggedInUser.getRole())) {
-                    // Truyền đối tượng user sang giao diện bán hàng để nó biết ai đang đăng
-                    new SellerDashboard(loggedInUser).setVisible(true);
+                    // Mở TRANG QUẢN LÝ thay vì mở trực tiếp form Đăng bài
+                    new SellerManagementFrame(loggedInUser).setVisible(true);
 
                 } else if ("BUYER".equals(loggedInUser.getRole())) {
                     new BuyerDashboard(loggedInUser).setVisible(true);
-
-                } 
+                }
             } else {
                 JOptionPane.showMessageDialog(this, "Sai tài khoản hoặc mật khẩu!", "Lỗi truy cập", JOptionPane.ERROR_MESSAGE);
             }
@@ -69,7 +80,6 @@ public class LoginFrame extends JFrame {
     }
 
     public static void main(String[] args) {
-        // Giao diện sẽ tự khởi chạy ở đây
         new LoginFrame().setVisible(true);
     }
 }

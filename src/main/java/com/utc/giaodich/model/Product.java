@@ -5,77 +5,47 @@ public class Product {
     private int sellerId;
     private String name;
     private double price;
+    private int quantity;    // 1. Thêm biến này
     private String description;
-    private String imagePath; // Đường dẫn ảnh trong thư mục uploads
-    private String status;    // 'AVAILABLE' hoặc 'SOLD'
+    private String imagePath;
+    private String status;
 
     public Product() {}
 
-    public Product(int id, int sellerId, String name, double price, String description, String imagePath, String status) {
+    // 2. Cập nhật Constructor này để khớp với dòng bị gạch đỏ
+    public Product(int id, int sellerId, String name, double price, int quantity, String description, String imagePath, String status) {
         this.id = id;
         this.sellerId = sellerId;
         this.name = name;
         this.price = price;
+        this.quantity = quantity; // Nhận giá trị quantity
         this.description = description;
         this.imagePath = imagePath;
         this.status = status;
     }
 
-    // Tương tự, dùng Cmd + N để tạo Getter/Setter nhé
+    // 3. Đảm bảo có đầy đủ Getter và Setter[cite: 9]
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
 
-    public int getId() {
-        return id;
-    }
+    public int getSellerId() { return sellerId; }
+    public void setSellerId(int sellerId) { this.sellerId = sellerId; }
 
-    public int getSellerId() {
-        return sellerId;
-    }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public String getName() {
-        return name;
-    }
+    public double getPrice() { return price; }
+    public void setPrice(double price) { this.price = price; }
 
-    public double getPrice() {
-        return price;
-    }
+    public int getQuantity() { return quantity; }
+    public void setQuantity(int quantity) { this.quantity = quantity; }
 
-    public String getDescription() {
-        return description;
-    }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
-    public String getImagePath() {
-        return imagePath;
-    }
+    public String getImagePath() { return imagePath; }
+    public void setImagePath(String imagePath) { this.imagePath = imagePath; }
 
-    public String getStatus() {
-        return status;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public void setSellerId(int sellerId) {
-        this.sellerId = sellerId;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public void setPrice(double price) {
-        this.price = price;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public void setImagePath(String imagePath) {
-        this.imagePath = imagePath;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 }

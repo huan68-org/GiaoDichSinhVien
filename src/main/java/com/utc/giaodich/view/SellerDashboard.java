@@ -10,21 +10,21 @@ import java.awt.*;
 import java.io.File;
 
 public class SellerDashboard extends JFrame {
-    private User seller; // Lưu thông tin người bán đang đăng nhập
-    private File selectedFile; // Lưu trữ file ảnh người dùng vừa chọn
+    private User seller;
+    private File selectedFile;
 
     // Các thành phần giao diện
-    private JTextField txtName, txtPrice;
+    private JTextField txtName, txtPrice, txtQuantity;
     private JTextArea txtDescription;
     private JLabel lblImagePreview;
-    private JButton btnChooseImage, btnSubmit, btnInbox;
+    private JButton btnChooseImage, btnSubmit;
 
-    // Constructor nhận vào đối tượng User để biết ai đang đăng bán
     public SellerDashboard(User seller) {
         this.seller = seller;
-        setTitle("Sàn Đồ Cũ - Kênh Người Bán: " + seller.getFullName());
+        setTitle("Đăng Sản Phẩm Mới");
         setSize(800, 500);
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        // Quan trọng: Chỉ tắt form này, không tắt cả chương trình
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(10, 10));
 
@@ -33,19 +33,37 @@ public class SellerDashboard extends JFrame {
         pnlLeft.setBorder(BorderFactory.createTitledBorder("Thông tin sản phẩm"));
         pnlLeft.setPreferredSize(new Dimension(400, 500));
 
-        JPanel pnlInput = new JPanel(new GridLayout(6, 1, 5, 5));
+        // Sử dụng BoxLayout để các ô nhập liệu không bị chia đều chiều cao một cách cứng nhắc
+        JPanel pnlInput = new JPanel();
+        pnlInput.setLayout(new BoxLayout(pnlInput, BoxLayout.Y_AXIS));
+
         pnlInput.add(new JLabel("Tên sản phẩm:"));
-        txtName = new JTextField(); pnlInput.add(txtName);
+        txtName = new JTextField();
+        txtName.setMaximumSize(new Dimension(400, 30));
+        pnlInput.add(txtName);
 
+        pnlInput.add(Box.createVerticalStrut(10));
         pnlInput.add(new JLabel("Giá bán (VNĐ):"));
-        txtPrice = new JTextField(); pnlInput.add(txtPrice);
+        txtPrice = new JTextField();
+        txtPrice.setMaximumSize(new Dimension(400, 30));
+        pnlInput.add(txtPrice);
 
+        pnlInput.add(Box.createVerticalStrut(10));
+        pnlInput.add(new JLabel("Số lượng trong kho:"));
+        txtQuantity = new JTextField("1");
+        txtQuantity.setMaximumSize(new Dimension(400, 30));
+        pnlInput.add(txtQuantity);
+
+        pnlInput.add(Box.createVerticalStrut(10));
         pnlInput.add(new JLabel("Mô tả chi tiết:"));
-        txtDescription = new JTextArea(3, 20);
+        txtDescription = new JTextArea(10, 20); // Tăng kích thước ô mô tả
         txtDescription.setLineWrap(true);
-        pnlInput.add(new JScrollPane(txtDescription));
+        txtDescription.setWrapStyleWord(true);
+        JScrollPane scrollDesc = new JScrollPane(txtDescription);
+        scrollDesc.setPreferredSize(new Dimension(400, 150));
+        pnlInput.add(scrollDesc);
 
-        pnlLeft.add(pnlInput, BorderLayout.NORTH);
+        pnlLeft.add(pnlInput, BorderLayout.CENTER);
 
         // --- CỘT PHẢI: KHU VỰC ẢNH ---
         JPanel pnlRight = new JPanel(new BorderLayout(5, 5));
@@ -60,41 +78,26 @@ public class SellerDashboard extends JFrame {
         pnlImageBtns.add(btnChooseImage);
         pnlRight.add(pnlImageBtns, BorderLayout.SOUTH);
 
-        // --- KHU VỰC DƯỚI CÙNG: HỘP THƯ VÀ NÚT ĐĂNG BÁN ---
-        JPanel pnlBottom = new JPanel(); // Khởi tạo Panel trước tiên
+        // --- KHU VỰC DƯỚI CÙNG: NÚT ĐĂNG BÁN ---
+        JPanel pnlBottom = new JPanel();
 
-        // Thêm nút Hộp thư cho Người Bán
-        btnInbox = new JButton("HỘP THƯ (MỞ ĐỂ NHẬN TIN)");
-        btnInbox.setBackground(new Color(52, 152, 219));
-        btnInbox.setForeground(Color.WHITE);
-        btnInbox.setOpaque(true);
-        btnInbox.setBorderPainted(false);
-        pnlBottom.add(btnInbox); // Lắp vào Panel
-
-        // Thêm Nút đăng bán
         btnSubmit = new JButton("ĐĂNG BÁN SẢN PHẨM MỚI");
         btnSubmit.setFont(new Font("Arial", Font.BOLD, 14));
-        btnSubmit.setBackground(new Color(46, 204, 113)); // Màu xanh lá cây
+        btnSubmit.setBackground(new Color(46, 204, 113));
+        btnSubmit.setForeground(Color.WHITE);
         btnSubmit.setOpaque(true);
-        pnlBottom.add(btnSubmit); // Lắp vào Panel
+        btnSubmit.setBorderPainted(false);
+        pnlBottom.add(btnSubmit);
 
-        // Add 3 khu vực vào JFrame
         add(pnlLeft, BorderLayout.WEST);
         add(pnlRight, BorderLayout.CENTER);
         add(pnlBottom, BorderLayout.SOUTH);
 
         // --- XỬ LÝ SỰ KIỆN ---
         btnChooseImage.addActionListener(e -> chooseImage());
-
         btnSubmit.addActionListener(e -> submitProduct());
-
-        // Sự kiện mở Chat cho Người Bán
-        btnInbox.addActionListener(e -> {
-            new ChatFrame(seller.getUsername(), "ha_buyer").setVisible(true);
-        });
     }
 
-    // Hàm xử lý mở hộp thoại chọn file trên Mac
     private void chooseImage() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Chọn hình ảnh sản phẩm");
@@ -111,31 +114,28 @@ public class SellerDashboard extends JFrame {
         }
     }
 
-    // Hàm xử lý Đăng bán (Kết nối với DAO)
     private void submitProduct() {
-        if (txtName.getText().isEmpty() || txtPrice.getText().isEmpty() || selectedFile == null) {
+        if (txtName.getText().trim().isEmpty() || txtPrice.getText().trim().isEmpty()
+                || txtQuantity.getText().trim().isEmpty() || selectedFile == null) {
             JOptionPane.showMessageDialog(this, "Vui lòng nhập đủ thông tin và chọn ảnh!");
             return;
         }
 
         try {
-            double price = Double.parseDouble(txtPrice.getText());
+            double price = Double.parseDouble(txtPrice.getText().trim());
+            int quantity = Integer.parseInt(txtQuantity.getText().trim());
 
-            // 1. Tạo đối tượng Product
-            Product p = new Product(0, seller.getId(), txtName.getText(), price, txtDescription.getText(), "", "AVAILABLE");
+            Product p = new Product(0, seller.getId(), txtName.getText().trim(), price, quantity, txtDescription.getText().trim(), "", "AVAILABLE");
 
-            // 2. Gọi DAO để lưu vào DB và copy file ảnh
             ProductDAO dao = new ProductDAO();
             if (dao.addProduct(p, selectedFile)) {
                 JOptionPane.showMessageDialog(this, "Đăng bán thành công!");
-                txtName.setText(""); txtPrice.setText(""); txtDescription.setText("");
-                lblImagePreview.setIcon(null); lblImagePreview.setText("Chưa chọn ảnh");
-                selectedFile = null;
+                this.dispose();
             } else {
-                JOptionPane.showMessageDialog(this, "Có lỗi xảy ra khi lưu dữ liệu.");
+                JOptionPane.showMessageDialog(this, "Có lỗi xảy ra khi lưu dữ liệu vào Database.");
             }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Giá tiền phải là số!");
+            JOptionPane.showMessageDialog(this, "Lỗi: Giá tiền và Số lượng phải là số hợp lệ!");
         }
     }
 }

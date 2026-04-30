@@ -29,4 +29,26 @@ public class UserDAO {
         }
         return null;
     }
+
+    // Hàm đăng ký tài khoản mới
+    public boolean register(User user) {
+        // Câu lệnh SQL thêm user mới vào CSDL
+        String sql = "INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, user.getUsername());
+            pstmt.setString(2, user.getPassword());
+            pstmt.setString(3, user.getFullName());
+            pstmt.setString(4, user.getRole());
+
+            // executeUpdate trả về số dòng bị ảnh hưởng. Nếu > 0 nghĩa là insert thành công
+            return pstmt.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }
