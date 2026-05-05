@@ -1,86 +1,109 @@
 package com.utc.giaodich.view;
 
-import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.handshake.ServerHandshake;
+import com.utc.giaodich.dao.MessageDAO;
 
 import javax.swing.*;
 import java.awt.*;
-import java.net.URI;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
 public class ChatFrame extends JFrame {
-    private JTextArea areaChat;
+    private String currentUser;
+    private String partnerUser;
+
+    private JTextArea txtChatArea;
     private JTextField txtMessage;
-    private WebSocketClient client;
-    private String myUser;
-    private String targetUser;
+    private MessageDAO messageDAO;
+    private Timer chatTimer; // Bộ đếm giờ để cập nhật tin nhắn liên tục
 
-    public ChatFrame(String myUser, String targetUser) {
-        this.myUser = myUser;
-        this.targetUser = targetUser;
+    public ChatFrame(String currentUser, String partnerUser) {
+        this.currentUser = currentUser;
+        this.partnerUser = partnerUser;
+        this.messageDAO = new MessageDAO();
 
-        setTitle("Chat với " + targetUser);
+        setTitle("Chat: " + currentUser + " ↔ " + partnerUser);
         setSize(400, 500);
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        // Khu vực hiển thị tin nhắn
-        areaChat = new JTextArea();
-        areaChat.setEditable(false);
-        areaChat.setLineWrap(true);
-        add(new JScrollPane(areaChat), BorderLayout.CENTER);
+        // --- KHU VỰC HIỂN THỊ TIN NHẮN ---
+        txtChatArea = new JTextArea();
+        txtChatArea.setEditable(false);
+        txtChatArea.setLineWrap(true);
+        txtChatArea.setWrapStyleWord(true);
+        txtChatArea.setFont(new Font("Arial", Font.PLAIN, 14));
+        txtChatArea.setBackground(new Color(245, 245, 245));
 
-        // Khu vực nhập tin nhắn
-        JPanel pnlBottom = new JPanel(new BorderLayout());
+        JScrollPane scrollPane = new JScrollPane(txtChatArea);
+        add(scrollPane, BorderLayout.CENTER);
+
+        // --- KHU VỰC NHẬP TIN NHẮN DƯỚI CÙNG ---
+        JPanel pnlBottom = new JPanel(new BorderLayout(5, 5));
+        pnlBottom.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
         txtMessage = new JTextField();
+        txtMessage.setFont(new Font("Arial", Font.PLAIN, 14));
+
         JButton btnSend = new JButton("Gửi");
+        btnSend.setBackground(new Color(52, 152, 219));
+        btnSend.setForeground(Color.WHITE);
+        btnSend.setOpaque(true);
+        btnSend.setBorderPainted(false);
+
         pnlBottom.add(txtMessage, BorderLayout.CENTER);
         pnlBottom.add(btnSend, BorderLayout.EAST);
         add(pnlBottom, BorderLayout.SOUTH);
 
-        // KẾT NỐI ĐẾN TỔNG ĐÀI
-        connectToServer();
-
-        // Xử lý sự kiện bấm nút Gửi
+        // --- XỬ LÝ SỰ KIỆN GỬI TIN NHẮN ---
+        // Gửi bằng nút bấm
         btnSend.addActionListener(e -> sendMessage());
-        // Cho phép ấn Enter để gửi luôn
-        txtMessage.addActionListener(e -> sendMessage());
+
+        // Gửi bằng phím Enter cho chuyên nghiệp
+        txtMessage.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    sendMessage();
+                }
+            }
+        });
+
+        // --- REAL-TIME ENGINE (Load lại tin nhắn mỗi 1 giây) ---
+        loadChatHistory(); // Load lần đầu khi mở form
+
+        chatTimer = new Timer(1000, e -> loadChatHistory());
+        chatTimer.start();
+
+        // Tắt Timer khi đóng cửa sổ Chat để tiết kiệm tài nguyên
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosed(java.awt.event.WindowEvent windowEvent) {
+                chatTimer.stop();
+            }
+        });
     }
 
-    private void connectToServer() {
-        try {
-            client = new WebSocketClient(new URI("ws://localhost:8887")) {
-                @Override
-                public void onOpen(ServerHandshake handshakedata) {
-                    areaChat.append("Đã kết nối an toàn tới hệ thống...\n");
-                    // Gửi một tin nhắn "chào sân" ẩn để Server biết mình là ai
-                    client.send(myUser + "|server|has_joined");
-                }
-
-                @Override
-                public void onMessage(String message) {
-                    // Khi nhận được tin nhắn từ Server, in ra màn hình
-                    areaChat.append(message + "\n");
-                }
-
-                @Override
-                public void onClose(int code, String reason, boolean remote) {}
-
-                @Override
-                public void onError(Exception ex) {}
-            };
-            client.connect();
-        } catch (Exception e) {
-            e.printStackTrace();
+    // Hàm thực hiện việc gửi tin nhắn
+    private void sendMessage() {
+        String msg = txtMessage.getText().trim();
+        if (!msg.isEmpty()) {
+            if (messageDAO.sendMessage(currentUser, partnerUser, msg)) {
+                txtMessage.setText(""); // Xóa trắng ô nhập sau khi gửi
+                loadChatHistory();      // Nạp lại màn hình chat ngay lập tức
+            }
         }
     }
 
-    private void sendMessage() {
-        String msg = txtMessage.getText().trim();
-        if (!msg.isEmpty() && client.isOpen()) {
-            // Gửi lên Server theo đúng format: NgườiGửi|NgườiNhận|NộiDung
-            client.send(myUser + "|" + targetUser + "|" + msg);
-            areaChat.append("Tôi: " + msg + "\n");
-            txtMessage.setText("");
+    // Hàm lấy lịch sử chat từ Database và cập nhật lên màn hình
+    private void loadChatHistory() {
+        String newHistory = messageDAO.getChatHistory(currentUser, partnerUser);
+
+        // Chỉ cập nhật giao diện nếu có tin nhắn mới (tránh bị giật màn hình)
+        if (!txtChatArea.getText().equals(newHistory)) {
+            txtChatArea.setText(newHistory);
+            // Tự động cuộn xuống dòng cuối cùng để đọc tin mới
+            txtChatArea.setCaretPosition(txtChatArea.getDocument().getLength());
         }
     }
 }
