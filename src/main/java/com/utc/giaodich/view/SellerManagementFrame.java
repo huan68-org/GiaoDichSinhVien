@@ -13,6 +13,7 @@ public class SellerManagementFrame extends JFrame {
     private User seller;
     private JTable table;
     private DefaultTableModel tableModel;
+    private Timer autoRefreshTimer; // Đã thêm lại bộ đếm giờ
 
     public SellerManagementFrame(User seller) {
         this.seller = seller;
@@ -32,9 +33,8 @@ public class SellerManagementFrame extends JFrame {
         String[] columns = {"ID", "Tên sản phẩm", "Giá (VNĐ)", "Số lượng", "Trạng thái"};
         tableModel = new DefaultTableModel(columns, 0);
         table = new JTable(tableModel);
-        // Ngăn không cho người dùng sửa trực tiếp trên bảng
         table.setDefaultEditor(Object.class, null);
-        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION); // Chỉ chọn 1 dòng mỗi lần
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         add(new JScrollPane(table), BorderLayout.CENTER);
 
         // --- KHU VỰC NÚT BẤM DƯỚI CÙNG ---
@@ -44,6 +44,14 @@ public class SellerManagementFrame extends JFrame {
         btnDelete.setBackground(new Color(231, 76, 60));
         btnDelete.setForeground(Color.WHITE);
         btnDelete.setOpaque(true); btnDelete.setBorderPainted(false);
+
+        // Tìm đến pnlBottom và thêm nút mới
+        JButton btnSales = new JButton("Lịch sử bán & Doanh thu 💰");
+        btnSales.setBackground(new Color(155, 89, 182));
+        btnSales.setForeground(Color.WHITE);
+        btnSales.setOpaque(true); btnSales.setBorderPainted(false);
+        btnSales.addActionListener(e -> new HistoryFrame("Thống kê bán hàng", seller.getId(), true).setVisible(true));
+        pnlBottom.add(btnSales);
 
         JButton btnEdit = new JButton("Sửa Nhanh (Giá/SL)");
         btnEdit.setBackground(new Color(241, 196, 15));
@@ -57,46 +65,67 @@ public class SellerManagementFrame extends JFrame {
         btnAdd.setOpaque(true); btnAdd.setBorderPainted(false);
 
         pnlBottom.add(btnInbox);
-        pnlBottom.add(btnDelete); // Nút Xóa
-        pnlBottom.add(btnEdit);   // Nút Sửa
+        pnlBottom.add(btnDelete);
+        pnlBottom.add(btnEdit);
         pnlBottom.add(btnRefresh);
         pnlBottom.add(btnAdd);
         add(pnlBottom, BorderLayout.SOUTH);
 
         // --- XỬ LÝ SỰ KIỆN ---
-
-        btnAdd.addActionListener(e -> {
-            new SellerDashboard(seller).setVisible(true);
-        });
+        btnAdd.addActionListener(e -> new SellerDashboard(seller).setVisible(true));
 
         btnRefresh.addActionListener(e -> loadData());
 
+        // CHỈNH SỬA: Nhập chính xác username khách hàng để chat
         btnInbox.addActionListener(e -> {
-            new ChatFrame(seller.getUsername(), "khach_hang").setVisible(true);
+            String targetBuyer = JOptionPane.showInputDialog(this,
+                    "Nhập Username của khách hàng muốn Chat:",
+                    "Hộp thư", JOptionPane.QUESTION_MESSAGE);
+
+            if (targetBuyer != null && !targetBuyer.trim().isEmpty()) {
+                new ChatFrame(seller.getUsername(), targetBuyer.trim()).setVisible(true);
+            }
         });
 
-        // Sự kiện Sửa Nhanh
         btnEdit.addActionListener(e -> editSelectedProduct());
-
-        // Sự kiện Xóa
         btnDelete.addActionListener(e -> deleteSelectedProduct());
 
-        loadData(); // Load dữ liệu lần đầu
+        loadData();
+
+        // --- KHÔI PHỤC AUTO-REFRESH GIỮ FOCUS ---
+        autoRefreshTimer = new Timer(5000, e -> loadData());
+        autoRefreshTimer.start();
     }
 
     private void loadData() {
+        // Lưu lại vị trí đang chọn
+        int selectedId = -1;
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow != -1) {
+            selectedId = Integer.parseInt(tableModel.getValueAt(selectedRow, 0).toString());
+        }
+
         tableModel.setRowCount(0);
         ProductDAO dao = new ProductDAO();
         List<Product> products = dao.getProductsBySeller(seller.getId());
 
-        for (Product p : products) {
+        int rowToSelect = -1;
+        for (int i = 0; i < products.size(); i++) {
+            Product p = products.get(i);
             tableModel.addRow(new Object[]{
                     p.getId(), p.getName(), p.getPrice(), p.getQuantity(), p.getStatus()
             });
+            if (p.getId() == selectedId) {
+                rowToSelect = i;
+            }
+        }
+
+        // Phục hồi vị trí đang chọn
+        if (rowToSelect != -1) {
+            table.setRowSelectionInterval(rowToSelect, rowToSelect);
         }
     }
 
-    // Hàm xử lý Xóa sản phẩm
     private void deleteSelectedProduct() {
         int selectedRow = table.getSelectedRow();
         if (selectedRow == -1) {
@@ -104,7 +133,6 @@ public class SellerManagementFrame extends JFrame {
             return;
         }
 
-        // Lấy ID của sản phẩm ở cột 0
         int productId = Integer.parseInt(tableModel.getValueAt(selectedRow, 0).toString());
         String productName = tableModel.getValueAt(selectedRow, 1).toString();
 
@@ -116,18 +144,19 @@ public class SellerManagementFrame extends JFrame {
             ProductDAO dao = new ProductDAO();
             if (dao.deleteProduct(productId)) {
                 JOptionPane.showMessageDialog(this, "Đã xóa sản phẩm thành công!");
-                loadData(); // Tải lại bảng ngay lập tức
+                loadData();
             } else {
                 JOptionPane.showMessageDialog(this, "Xóa thất bại. Đã xảy ra lỗi!", "Lỗi", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
-    // Hàm xử lý Sửa nhanh
     private void editSelectedProduct() {
+        autoRefreshTimer.stop(); // Dừng timer lúc nhập liệu
         int selectedRow = table.getSelectedRow();
         if (selectedRow == -1) {
             JOptionPane.showMessageDialog(this, "Vui lòng chọn một sản phẩm trên bảng để sửa!", "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+            autoRefreshTimer.start();
             return;
         }
 
@@ -135,7 +164,6 @@ public class SellerManagementFrame extends JFrame {
         double currentPrice = Double.parseDouble(tableModel.getValueAt(selectedRow, 2).toString());
         int currentQty = Integer.parseInt(tableModel.getValueAt(selectedRow, 3).toString());
 
-        // Tạo giao diện nhập liệu nhỏ gọn bằng JOptionPane
         JTextField txtNewPrice = new JTextField(String.valueOf(currentPrice));
         JTextField txtNewQty = new JTextField(String.valueOf(currentQty));
         Object[] message = {
@@ -151,17 +179,17 @@ public class SellerManagementFrame extends JFrame {
 
                 if (newPrice < 0 || newQty < 0) {
                     JOptionPane.showMessageDialog(this, "Giá và số lượng không được âm!");
-                    return;
-                }
-
-                ProductDAO dao = new ProductDAO();
-                if(dao.updateProduct(productId, newPrice, newQty)) {
-                    JOptionPane.showMessageDialog(this, "Cập nhật thành công!");
-                    loadData(); // Tải lại bảng
+                } else {
+                    ProductDAO dao = new ProductDAO();
+                    if(dao.updateProduct(productId, newPrice, newQty)) {
+                        JOptionPane.showMessageDialog(this, "Cập nhật thành công!");
+                        loadData();
+                    }
                 }
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "Vui lòng nhập số hợp lệ!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
             }
         }
+        autoRefreshTimer.start(); // Bật lại timer sau khi sửa xong
     }
 }

@@ -15,7 +15,7 @@ public class CheckoutFrame extends JFrame {
     private JTextField txtPhone, txtAddress;
     private JComboBox<String> cbPaymentMethod;
     private JSpinner spnQuantity;
-    private JLabel lblTotalAmount; // Hiện tổng tiền thay đổi linh hoạt
+    private JLabel lblTotalAmount;
 
     public CheckoutFrame(User buyer, Product product) {
         this.buyer = buyer;
@@ -23,11 +23,10 @@ public class CheckoutFrame extends JFrame {
 
         setTitle("Thanh toán an toàn - Sàn Đồ Cũ UTC");
         setSize(500, 450);
-        setDefaultCloseOperation(DISPOSE_ON_CLOSE); // Chỉ đóng form này, không tắt app
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(10, 10));
 
-        // Định dạng tiền tệ cho đẹp mắt
         DecimalFormat df = new DecimalFormat("#,###.## VNĐ");
 
         // --- TIÊU ĐỀ ---
@@ -54,7 +53,7 @@ public class CheckoutFrame extends JFrame {
         pnlCenter.add(pnlSummary, BorderLayout.NORTH);
 
         // Nhập thông tin giao hàng
-        JPanel pnlShipping = new JPanel(new GridLayout(4, 2, 10, 15)); // 4 hàng để chứa ô số lượng
+        JPanel pnlShipping = new JPanel(new GridLayout(4, 2, 10, 15));
         pnlShipping.setBorder(BorderFactory.createTitledBorder("Thông tin giao hàng"));
 
         pnlShipping.add(new JLabel("Số điện thoại (*):"));
@@ -66,7 +65,6 @@ public class CheckoutFrame extends JFrame {
         pnlShipping.add(txtAddress);
 
         pnlShipping.add(new JLabel("Số lượng muốn mua:"));
-        // Cấu hình Spinner: Mặc định là 1, Min là 1, Max là số lượng trong kho, bước nhảy là 1
         SpinnerModel spinnerModel = new SpinnerNumberModel(1, 1, product.getQuantity(), 1);
         spnQuantity = new JSpinner(spinnerModel);
         pnlShipping.add(spnQuantity);
@@ -92,15 +90,12 @@ public class CheckoutFrame extends JFrame {
         add(pnlBottom, BorderLayout.SOUTH);
 
         // --- XỬ LÝ SỰ KIỆN ---
-
-        // Lắng nghe sự kiện thay đổi số lượng để tính lại tiền ngay lập tức
         spnQuantity.addChangeListener(e -> {
             int qty = (int) spnQuantity.getValue();
             double total = qty * product.getPrice();
             lblTotalAmount.setText("Tổng thanh toán: " + df.format(total));
         });
 
-        // Bắt sự kiện nút xác nhận
         btnConfirm.addActionListener(e -> confirmOrder());
     }
 
@@ -111,7 +106,6 @@ public class CheckoutFrame extends JFrame {
         String address = txtAddress.getText().trim();
         String paymentMethod = cbPaymentMethod.getSelectedItem().toString();
 
-        // Giao việc cho Controller xử lý logic
         OrderController controller = new OrderController();
         controller.handleCheckout(
                 buyer.getId(),
@@ -121,7 +115,12 @@ public class CheckoutFrame extends JFrame {
                 phone,
                 address,
                 paymentMethod,
-                () -> this.dispose() // Đóng cửa sổ nếu Controller báo mua thành công
+                () -> {
+                    this.dispose(); // 1. Đóng form thanh toán đi
+
+                    // 2. GỌI FORM HÓA ĐƠN HIỆN LÊN
+                    new InvoiceFrame(buyer, product, buyQty, total, paymentMethod).setVisible(true);
+                }
         );
     }
 }

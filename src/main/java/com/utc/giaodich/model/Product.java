@@ -3,33 +3,36 @@ package com.utc.giaodich.model;
 public class Product {
     private int id;
     private int sellerId;
+    private String sellerUsername; // Thêm username người bán để chat P2P chính xác
     private String name;
     private double price;
-    private int quantity;    // 1. Thêm biến này
+    private int quantity;
     private String description;
     private String imagePath;
     private String status;
 
     public Product() {}
 
-    // 2. Cập nhật Constructor này để khớp với dòng bị gạch đỏ
     public Product(int id, int sellerId, String name, double price, int quantity, String description, String imagePath, String status) {
         this.id = id;
         this.sellerId = sellerId;
         this.name = name;
         this.price = price;
-        this.quantity = quantity; // Nhận giá trị quantity
+        this.quantity = quantity;
         this.description = description;
         this.imagePath = imagePath;
         this.status = status;
     }
 
-    // 3. Đảm bảo có đầy đủ Getter và Setter[cite: 9]
+    // --- GETTER & SETTER ---
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
 
     public int getSellerId() { return sellerId; }
     public void setSellerId(int sellerId) { this.sellerId = sellerId; }
+
+    public String getSellerUsername() { return sellerUsername; }
+    public void setSellerUsername(String sellerUsername) { this.sellerUsername = sellerUsername; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
